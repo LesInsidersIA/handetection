@@ -74,14 +74,16 @@ def preprocess_img(src_img):
 
     # create a binary image with where white will be skin colores and rest is black
     # perform basic thresholding operation based on the range of pixel values in the HSV colorspace
-    mask_img = cv2.inRange(hsv_img, np.array([2,50,50]), np.array([15,255,255]))
+    lower = np.array([2,50,50], dtype="uint8")
+    upper = np.array([15,255,255], dtype="uint8")
+    skin_region_hsv = cv2.inRange(hsv_img, lower, upper)
 
     # kernel matrices for morphological transformation
     kernel_square = np.ones((11,11), np.uint8)
     kernel_ellipse = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
 
     # perform morphological operations to filter the background noise dilation and erosion increase skin color area
-    dilation = cv2.dilate(mask_img, kernel_ellipse, iterations=1)
+    dilation = cv2.dilate(skin_region_hsv, kernel_ellipse, iterations=1)
     erosion = cv2.erode(dilation, kernel_square, iterations=1)
     dilation2 = cv2.dilate(erosion,kernel_ellipse, iterations = 1)   
     filtered = cv2.medianBlur(dilation2,5)
