@@ -95,3 +95,20 @@ def preprocess_img(src_img):
     ret, thresh_img = cv2.threshold(median,127,255,0)
 
     return thresh_img
+
+
+def midpoint(ptA, ptB):
+    
+    """
+    This function compute the coordinate of the midlle point from two givens points.
+    Parameters
+    ----------
+    ptA       : tuple (coordinates of the first point)
+    ptB       : tupe (coordinates of the second point) 
+
+    Returns 
+    -------
+    ptM : coordinates of the middle point
+    
+    """
+    ptM = ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)return ptM

@@ -1,12 +1,12 @@
-
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
 from utils import *
+from scipy.spatial import distance as dist
 
 def main():
-    img = cv2.imread("images/01.jpg", 1)
+    img = cv2.imread("images/04.jpg", 1)
 
     # Resize the image using a scale percentage
     resized_img = resizing_img(img, 30)    
@@ -31,7 +31,6 @@ def main():
 	# largest area contour 			  
     cnts = contours[ci]
 
-    #img = cv2.drawContours(resized_img, contours, 3, (0,255,0), 3)
     # find convex hull
     hull = cv2.convexHull(cnts)
     
@@ -48,7 +47,7 @@ def main():
         far = tuple(cnts[f][0])
         far_detect.append(far)
         
-        cv2.line(resized_img, start, end, [0,255,0], 1)
+        cv2.line(resized_img, start, end, [100,0,255], 1)
         #cv2.circle(resized_img, far, 10, [0,0,255], 2)
     
     '''
@@ -56,10 +55,9 @@ def main():
     image moment help you to calculate some features like center of mass of an object, centroid, bounding box, etc.
     '''
     
-    moments = cv2.moments(cnts)
-
     # we need to find the contours features like moment which will help us calculate features like center of the mass featurs
     # compute the centroid given by the formula cx = m10/m00 and cy = m01/m00
+    moments = cv2.moments(cnts)
     if moments['m00']!=0:
         cx = int(moments['m10'] / moments['m00']) 
         cy = int(moments['m01'] / moments['m00'])
@@ -70,17 +68,7 @@ def main():
     # draw center max
     cv2.circle(resized_img, center_mass, 7, [100,0,255], 2)
     cv2.putText(resized_img,'CENTER', tuple(center_mass), font, 0.5, (255,255,255), 1) 
-    
-    # distance from each finger defect (finger webbing) to the center mass
-    distance_between_defects_to_center = []
-    for i in range(0, len(far_detect)):
-        x = np.array(far_detect[i])
-        center_mass = np.array(center_mass)
-        distance = np.sqrt(np.power(x[0] - center_mass[0], 2) + np.power(x[1] - center_mass[1], 2))
-        distance_between_defects_to_center.append(distance)
-    sorted_defect_distance = sorted(distance_between_defects_to_center)
-    average_defect_distance = np.mean(sorted_defect_distance[0:2])
-    
+
     # get fingertip points from contour hull if points are proximity of 80 pixels, consider a single point in the group
     finger = []
     for i in range(0, len(hull)-1):
@@ -92,12 +80,13 @@ def main():
     finger = sorted(finger, key=lambda x: x[1])
 
     fingers = finger[0:5]
-    
+    '''
     c0 = (fingers[0][0], fingers[0][1])
     c1 = (fingers[1][0], fingers[1][1])
     c2 = (fingers[2][0], fingers[2][1])
-    c3 = (fingers[3][0], fingers[3][1])
-    c4 = (fingers[4][0], fingers[4][1])
+    #c3 = (fingers[3][0], fingers[3][1])
+    #c4 = (fingers[4][0], fingers[4][1])
+    (mX, mY) = midpoint(c0,c1)
 
     cv2.circle(resized_img, c0, 7, [0,0,255], 2)
     cv2.circle(resized_img, c1, 7, [0,0,255], 2)
@@ -105,17 +94,20 @@ def main():
     cv2.line(resized_img, c0, c1, [0,0,255], 3)
 
     # compute distance between the tring finger and the middle finger
-    d = np.sqrt(np.power(c0[0] - c1[0], 2) + np.power(c0[1] - c1[1], 2))
-    print("Distance between two fingers ", d)
+    d = dist.euclidean(c0, c1)
+    print("Distance", d)
+    
+    cv2.putText(resized_img, "{:.1f}pxs".format(d), (int(mX), int(mY - 10)), font, 0.55, [0,0,0], 2)
 
     # show height raised fingers
-    cv2.putText(resized_img,'FINGER 1', tuple(finger[0]),font,0.5,(0,255,255),1)
-    cv2.putText(resized_img,'FINGER 2', tuple(finger[1]),font,0.5,(0,255,255),1)
-    cv2.putText(resized_img,'FINGER 3', tuple(finger[2]),font,0.5,(0,255,255),1)
-    cv2.putText(resized_img,'FINGER 4', tuple(finger[3]),font,0.5,(0,255,255),1)
-    cv2.putText(resized_img,'FINGER 5', tuple(finger[4]),font,0.5,(0,255,255),1)
-
+    cv2.putText(resized_img,'FINGER 1', tuple(finger[0]),font,0.5,(0,255,0),1)
+    cv2.putText(resized_img,'FINGER 2', tuple(finger[1]),font,0.5,(0,255,0),1)
+    cv2.putText(resized_img,'FINGER 3', tuple(finger[2]),font,0.5,(0,255,0),1)
+    #cv2.putText(resized_img,'FINGER 4', tuple(finger[3]),font,0.5,(0,255,0),1)
+    #cv2.putText(resized_img,'FINGER 5', tuple(finger[4]),font,0.5,(0,255,0),1)
+    '''
     cv2.imshow("RESIZED ORIGINAL IMAGE", resized_img)
+    cv2.imshow("RESIZED BINARY IMAGE", bin_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
