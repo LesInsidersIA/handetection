@@ -1,11 +1,16 @@
+
+from utils import *
+from scipy.spatial import distance as dist
+from scipy.spatial.distance import euclidean
+from imutils import contours
+from imutils import perspective
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import sys
-
-from utils import *
-from scipy.spatial import distance as dist
+import imutils
 
 def main():
 
@@ -18,11 +23,37 @@ def main():
     # Resize the image using a scale percentage
     resized_img = resizing_img(img, 20)    
 
-    #bin_img = edge_detection(resized_img)
-    bin_img = preprocess_img(resized_img)
+    bin_img1 = edge_detection(resized_img)
+    bin_img2 = preprocess_img(resized_img)
     
+    # find contours for the reference objects
+    cnts_ref = cv2.findContours(bin_img1.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts_ref = imutils.grab_contours(cnts_ref)
+    
+    # Sort contours from left to right as leftmost contour is reference object
+    '''
+    (cnts_ref, _) = contours.sort_contours(cnts_ref)
+    '''
+    cnts_ref = [x for x in cnts_ref if cv2.contourArea(x) > 100]
+    cv2.drawContours(resized_img, cnts_ref[0], -1, (0,255,0), 3)
+    
+    '''
+    Reference objects dimensions.
+    Here for reference I have used 3cm*2cm square
+    '''
+    ref_object = cnts_ref[0]
+    box = cv2.minAreaRect(ref_object)
+    box = cv2.boxPoints(box)
+    box = np.array(box, dtype="int")
+    box = perspective.order_points(box)
+    (tl, tr, br, bl) = box
+    dist_in_pixel = euclidean(tl, tr)
+    dist_in_cm = 2
+    pixel_per_cm = dist_in_pixel/dist_in_cm
+
+
     # find features of contours of the filtered frame
-    contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)   
+    contours, hierarchy = cv2.findContours(bin_img2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)   
     
     # find max contour area (assume that hand is in the frame)
     max_area = 100
@@ -113,21 +144,22 @@ def main():
     cv2.line(resized_img, fingers_list[2], center_mass, [0,0,255], 3)
     
     # compute distance between the tring finger and the middle finger
-    dc0c1 = dist.euclidean(fingers_list[0], fingers_list[1])
-    dc0c2 = dist.euclidean(fingers_list[0], fingers_list[2])
+    dc0c1 = dist.euclidean(fingers_list[0], fingers_list[1]) / pixel_per_cm
+    dc0c2 = dist.euclidean(fingers_list[0], fingers_list[2]) / pixel_per_cm
     
     print("Distance between c0 & c1 = ", dc0c1)
     print("Distance between c0 & c2 = ", dc0c2)
 
     # Show distance on the midlle of line between fingers
-    cv2.putText(resized_img, "{:.1f}pxs".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
-    cv2.putText(resized_img, "{:.1f}pxs".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
+    cv2.putText(resized_img, "{:.1f}cm".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
+    cv2.putText(resized_img, "{:.1f}cm".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
 
     # show height raised fingers
     for k in range(0, len(fingers)):
         cv2.putText(resized_img,'FINGER '+str(k), tuple(finger[k]),font,0.5,(0,255,0),1)    
     
-    cv2.imshow("RESIZED BINARY IMAGE", bin_img)
+    cv2.imshow("RESIZED BINARY IMAGE", bin_img2)
+    cv2.imshow("EDGED BINARY IMAGE", bin_img1)
     cv2.imshow("RESIZED ORIGINAL IMAGE", resized_img)
     
     cv2.waitKey(0)

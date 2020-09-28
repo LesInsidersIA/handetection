@@ -113,3 +113,17 @@ def midpoint(ptA, ptB):
     """
     ptM = ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
     return ptM
+
+
+# Function to show array of images (intermediate results)
+def show_images(images):
+    
+    """
+    This function shows an array of images (intermediate results)
+    ----------
+    """
+
+    for i, img in enumerate(images):
+        cv2.imshow("image_" + str(i), img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
