@@ -1,19 +1,25 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
+import sys
 
 from utils import *
 from scipy.spatial import distance as dist
 
 def main():
-    img = cv2.imread("images/09.jpg", 1)
 
+    # load the image
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--image", required=True,	help="path to the input image")
+    args = vars(ap.parse_args())
+    img =  cv2.imread(args["image"])
+    
     # Resize the image using a scale percentage
     resized_img = resizing_img(img, 20)    
 
     #bin_img = edge_detection(resized_img)
     bin_img = preprocess_img(resized_img)
-    print("Shape of resized image :", resized_img.shape)
     
     # find features of contours of the filtered frame
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)   
@@ -78,51 +84,48 @@ def main():
 
     # the fingertip points are 5 hull points with largest y coordinates
     finger = sorted(finger, key=lambda x: x[1])
-    print("Before sorting", finger)
 
     fingers = finger[0:5]
-    print("Before sorting", fingers)
+    fingers_list = []
+    middle_point = []
 
-    c0 = (fingers[0][0], fingers[0][1])
-    c1 = (fingers[1][0], fingers[1][1])
-    c2 = (fingers[2][0], fingers[2][1])
-    c3 = (fingers[3][0], fingers[3][1])
-    c4 = (fingers[4][0], fingers[4][1])
+    
+
+    for j in range(0, len(fingers)):
+        if len(fingers) <= 2 :
+            print("Terminated ! Not much fingers detected. Try another image")
+            sys.exit()
+        fingers_list.append((fingers[j][0], fingers[j][1]))
     
     # find the middle of line between fingers
-    (mc0c1X, mc0c1Y) = midpoint(c0,c1)
-    (mc0c2X, mc0c2Y) = midpoint(c0,c2)
+    (mc0c1X, mc0c1Y) = midpoint(fingers_list[0], fingers_list[1])
+    (mc0c2X, mc0c2Y) = midpoint(fingers_list[1], fingers_list[2])
 
     # draw circle on corresponding points on the original image
-    cv2.circle(resized_img, c0, 7, [0,0,255], 2)
-    cv2.circle(resized_img, c1, 7, [0,0,255], 2)
-
-    # draw line between corresponding lines
-    cv2.line(resized_img, c0, c1, [0,0,255], 3)
-    cv2.line(resized_img, c0, c2, [0,0,255], 3)
-    cv2.line(resized_img, c0, center_mass, [0,0,255], 3)
-    cv2.line(resized_img, c1, center_mass, [0,0,255], 3)
-    cv2.line(resized_img, c2, center_mass, [0,0,255], 3)
-
-    # compute distance between the tring finger and the middle finger
-    dc0c1 = dist.euclidean(c0, c1)
-    dc0c2 = dist.euclidean(c0, c2)
+    cv2.circle(resized_img, fingers_list[0], 7, [0,0,255], 2)
+    cv2.circle(resized_img, fingers_list[1], 7, [0,0,255], 2)
     
-    print("Distance between C0 & C1 = ", dc0c1)
-    print("Distance between C0 & C2 = ", dc0c2)
+    # draw line between corresponding lines
+    cv2.line(resized_img, fingers_list[0], fingers_list[1], [0,0,255], 3)
+    cv2.line(resized_img, fingers_list[0], fingers_list[2], [0,0,255], 3)
+    cv2.line(resized_img, fingers_list[0], center_mass, [0,0,255], 3)
+    cv2.line(resized_img, fingers_list[1], center_mass, [0,0,255], 3)
+    cv2.line(resized_img, fingers_list[2], center_mass, [0,0,255], 3)
+    
+    # compute distance between the tring finger and the middle finger
+    dc0c1 = dist.euclidean(fingers_list[0], fingers_list[1])
+    dc0c2 = dist.euclidean(fingers_list[0], fingers_list[2])
+    
+    print("Distance between c0 & c1 = ", dc0c1)
+    print("Distance between c0 & c2 = ", dc0c2)
 
     # Show distance on the midlle of line between fingers
     cv2.putText(resized_img, "{:.1f}pxs".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
     cv2.putText(resized_img, "{:.1f}pxs".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
 
-
-
     # show height raised fingers
-    cv2.putText(resized_img,'FINGER 1', tuple(finger[0]),font,0.5,(0,255,0),1)
-    cv2.putText(resized_img,'FINGER 2', tuple(finger[1]),font,0.5,(0,255,0),1)
-    cv2.putText(resized_img,'FINGER 3', tuple(finger[2]),font,0.5,(0,255,0),1)
-    cv2.putText(resized_img,'FINGER 4', tuple(finger[3]),font,0.5,(0,255,0),1)
-    cv2.putText(resized_img,'FINGER 5', tuple(finger[4]),font,0.5,(0,255,0),1)
+    for k in range(0, len(fingers)):
+        cv2.putText(resized_img,'FINGER '+str(k), tuple(finger[k]),font,0.5,(0,255,0),1)    
     
     cv2.imshow("RESIZED BINARY IMAGE", bin_img)
     cv2.imshow("RESIZED ORIGINAL IMAGE", resized_img)
