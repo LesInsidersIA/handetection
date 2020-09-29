@@ -20,8 +20,7 @@ def main():
     img =  cv2.imread(args["image"])
     
     # Resize the image using a scale percentage
-    resized_img = resizing_img(img, 20)    
-    print("shape :", resized_img.shape)
+    resized_img = resizing_img(img, 20)  
     bin_img1 = edge_detection(resized_img)
     bin_img2 = preprocess_img(resized_img)
     
@@ -30,18 +29,18 @@ def main():
     cnts_ref = imutils.grab_contours(cnts_ref)
     
     # sort contours from left to right as leftmost contour is reference object
-    
     (cnts_ref, _) = sort_contours(cnts_ref)
     
     cnts_ref = [x for x in cnts_ref if cv2.contourArea(x) > 100]
-    cv2.drawContours(resized_img, cnts_ref, -1, (0,255,0), 3)
+    cv2.drawContours(resized_img, cnts_ref[1], -1, (0,255,0), 3)
+    print("LEN :", len(cnts_ref))
     
     '''
     Reference objects dimensions.
     Here for reference I have used 2cm*2cm square
     '''
-
-    ref_object = cnts_ref[0]
+    # TODO : find how to choose the index of contours features of the reference object automatically.
+    ref_object = cnts_ref[1]
     box = cv2.minAreaRect(ref_object)
     box = cv2.boxPoints(box)
     box = np.array(box, dtype="int")
