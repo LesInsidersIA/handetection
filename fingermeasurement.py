@@ -34,7 +34,7 @@ def main():
     (cnts_ref, _) = sort_contours(cnts_ref)
     
     cnts_ref = [x for x in cnts_ref if cv2.contourArea(x) > 100]
-    cv2.drawContours(resized_img, cnts_ref[0], -1, (0,255,0), 3)
+    cv2.drawContours(resized_img, cnts_ref, -1, (0,255,0), 3)
     
     '''
     Reference objects dimensions.
@@ -50,7 +50,7 @@ def main():
     dist_in_pixel = euclidean(tl, tr)
     dist_in_cm = 2
     pixel_per_cm = dist_in_pixel/dist_in_cm
-    print("", pixel_per_cm)
+    print("Pixel per cm = ", pixel_per_cm)
 
     # find features of contours of the filtered frame
     contours, hierarchy = cv2.findContours(bin_img2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)   
@@ -104,13 +104,13 @@ def main():
     
     # draw center max
     cv2.circle(resized_img, center_mass, 7, [100,0,255], 2)
-    cv2.putText(resized_img,'CENTER', tuple(center_mass), font, 0.5, (255,255,255), 1) 
+    cv2.putText(resized_img,'CENTER', tuple(center_mass), font, 0.5, (255,0,0), 1) 
 
     # get fingertip points from contour hull if points are proximity of 80 pixels, consider a single point in the group
     finger = []
     for i in range(0, len(hull)-1):
         if (np.absolute(hull[i][0][0] - hull[i+1][0][0]) > 80) or ( np.absolute(hull[i][0][1] - hull[i+1][0][1]) > 80):
-            if hull[i][0][1] <500 :
+            if hull[i][0][1] < 500 :
                 finger.append(hull[i][0])
 
     # the fingertip points are 5 hull points with largest y coordinates
@@ -120,8 +120,6 @@ def main():
     fingers_list = []
     middle_point = []
 
-    
-
     for j in range(0, len(fingers)):
         if len(fingers) <= 2 :
             print("Terminated ! Not much fingers detected. Try another image")
@@ -130,11 +128,12 @@ def main():
     
     # find the middle of line between fingers
     (mc0c1X, mc0c1Y) = midpoint(fingers_list[0], fingers_list[1])
-    (mc0c2X, mc0c2Y) = midpoint(fingers_list[1], fingers_list[2])
+    (mc0c2X, mc0c2Y) = midpoint(fingers_list[0], fingers_list[2])
 
     # draw circle on corresponding points on the original image
     cv2.circle(resized_img, fingers_list[0], 7, [0,0,255], 2)
     cv2.circle(resized_img, fingers_list[1], 7, [0,0,255], 2)
+    cv2.circle(resized_img, fingers_list[2], 7, [0,0,255], 2)
     
     # draw line between corresponding lines
     cv2.line(resized_img, fingers_list[0], fingers_list[1], [0,0,255], 3)
@@ -147,21 +146,16 @@ def main():
     dc0c1 = euclidean(fingers_list[0], fingers_list[1]) / pixel_per_cm
     dc0c2 = euclidean(fingers_list[0], fingers_list[2]) / pixel_per_cm
     
-    print("Distance between c0 & c1 = ", dc0c1)
-    print("Distance between c0 & c2 = ", dc0c2)
-
     # show distance on the midlle of line between fingers
     cv2.putText(resized_img, "{:.1f}cm".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
     cv2.putText(resized_img, "{:.1f}cm".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
 
     # show height raised fingers
     for k in range(0, len(fingers)):
-        cv2.putText(resized_img,'FINGER '+str(k), tuple(finger[k]),font,0.5,(0,255,0),1)    
+        cv2.putText(resized_img,'FINGER '+str(k), tuple(finger[k]),font,0.4,(255,0,0),1)    
 
     # show_images([resized_img])
     tmp_img = np.hstack((bin_img2, bin_img1))
-    #tmp_img = np.concatenate((bin_img1, resized_img), axis=1)
-    #numpy_vertical_concat = np.concatenate((tmp_img, resized_img), axis=1)
     cv2.imshow('TMP IMG', tmp_img)
     cv2.imshow('Resized IMG', resized_img)
 
