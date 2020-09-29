@@ -21,7 +21,7 @@ def main():
     
     # Resize the image using a scale percentage
     resized_img = resizing_img(img, 20)    
-
+    print("shape :", resized_img.shape)
     bin_img1 = edge_detection(resized_img)
     bin_img2 = preprocess_img(resized_img)
     
@@ -158,6 +158,10 @@ def main():
     tmp_img = np.hstack((bin_img2, bin_img1))
     cv2.imshow('TMP IMG', tmp_img)
     cv2.imshow('Resized IMG', resized_img)
+
+    cv2.imwrite("images/edged_img.jpg", bin_img1)
+    cv2.imwrite("images/hsv_img.jpg", bin_img2)
+    cv2.imwrite("images/result_img.jpg", resized_img)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
