@@ -23,7 +23,7 @@ class App:
         self.button_right = tk.Button(self.frame, text="SHOW RESULT", command=self.result)
         self.button_right.pack(side="right")
 
-        self.button_top = tk.Button(self.frame, text="HSV THRESHOLDING", command=self.hsv_transform)
+        self.button_top = tk.Button(self.frame, text="SEGMENTATION", command=self.hsv_transform)
         self.button_top.pack(side="top")
 
         self.frame.bind("q", self.close)

@@ -1,12 +1,11 @@
 # import the necessary packages
-from utils import *
+from utils.utils import *
 from imutils import perspective
 from imutils.contours import sort_contours
 from scipy.spatial.distance import euclidean
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import argparse
 import sys
 import imutils
