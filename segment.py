@@ -18,7 +18,7 @@ if __name__ == "__main__":
     camera = cv2.VideoCapture(0)
 
     # region of interest (ROI) coordinates
-    top, right, bottom, left = 10, 350, 425, 700
+    top, right, bottom, left = 10, 350, 425, 7000
 
     # initialize num of frames
     num_frames = 0

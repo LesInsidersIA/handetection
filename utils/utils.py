@@ -212,14 +212,13 @@ def segment(image, threshold=25):
         segmented = max(cnts, key=cv2.contourArea)
         return (thresholded, segmented)
 
-
 #--------------------------------------------------------------
 # To count the number of fingers in the segmented hand region
 #--------------------------------------------------------------
-def count(thresholded, segmented):
+def extract_features(roi, thresholded, segmented):
     # find the convex hull of the segmented hand region
     chull = cv2.convexHull(segmented)
-
+    defects = []
     # find the most extreme points in the convex hull
     extreme_top    = tuple(chull[chull[:, :, 1].argmin()][0])
     extreme_bottom = tuple(chull[chull[:, :, 1].argmax()][0])
@@ -240,34 +239,81 @@ def count(thresholded, segmented):
 
     # find the circumference of the circle
     circumference = (2 * np.pi * radius)
+    cv2.circle(roi, (cX, cY), 4, [100,0,255], -1)
 
-    # take out the circular region of interest which has 
-    # the palm and the fingers
-    circular_roi = np.zeros(thresholded.shape[:2], dtype="uint8")
-	
-    # draw the circular ROI
-    cv2.circle(circular_roi, (cX, cY), radius, 255, 1)
+    
+    
 
-    # take bit-wise AND between thresholded hand using the circular ROI as the mask
-    # which gives the cuts obtained using mask on the thresholded hand image
-    circular_roi = cv2.bitwise_and(thresholded, thresholded, mask=circular_roi)
+    defects = get_defects(segmented)
+    
+    # get defect points and draw them in the original image
+    far_detects = []
+    counter = 0
+    
+    for i in range(defects.shape[0]):
+        s,e,f,d = defects[i,0]
+        start = tuple(segmented[s][0])
+        end = tuple(segmented[e][0])
+        far = tuple(segmented[f][0])
+        far_detects.append(far)
+        
+        a = np.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+        b = np.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+        c = np.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
+        angle = np.arccos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)) # cosine theorem
+        
+        four_far_detects = []
+        if angle <= np.pi/2:
+            counter += 1
+            cv2.circle(roi, far, 4, [0,255,255], -1)
+            four_far_detects.append(far)
+            cv2.line(roi, far, far, [255,255,0], 1)
+        #cv2.circle(roi, far, 10, [0,0,255], 2)
+        if counter > 0:
+            counter = counter + 1
+    
+    moments = cv2.moments(segmented)
+    if moments['m00']!=0:
+        cx = int(moments['m10'] / moments['m00']) 
+        cy = int(moments['m01'] / moments['m00'])
+    center_mass = (cx, cy)
+    
+    # get fingertip points from contour hull if points are proximity of 80 pixels, consider a single point in the group
+    finger = []
+    for i in range(0, len(chull)-1):
+        if (np.absolute(chull[i][0][0] - chull[i+1][0][0]) > 80) or ( np.absolute(chull[i][0][1] - chull[i+1][0][1]) > 80):
+            if chull[i][0][1] < 500 :
+                finger.append(chull[i][0])
 
-    # compute the contours in the circular ROI
-    (cnts, _) = cv2.findContours(circular_roi.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    # the fingertip points are 5 hull points with largest y coordinates
+    finger = sorted(finger, key=lambda x: x[1])
 
-    # initalize the finger count
-    count = 0
+    fingers = finger[0:5]
+    fingers_list = []
+    middle_point = []
 
-    # loop through the contours found
-    for c in cnts:
-        # compute the bounding box of the contour
-        (x, y, w, h) = cv2.boundingRect(c)
+    for j in range(0, len(fingers)):
+        fingers_list.append((fingers[j][0], fingers[j][1]))
+    
+    print("fingers = ", fingers)
+    print("finger list", fingers_list)
+    
+    cv2.circle(roi, center_mass, 7, [100,0,255], 2)
 
-        # increment the count of fingers only if -
-        # 1. The contour region is not the wrist (bottom area)
-        # 2. The number of points along the contour does not exceed
-        #     25% of the circumference of the circular ROI
-        if ((cY + (cY * 0.25)) > (y + h)) and ((circumference * 0.25) > c.shape[0]):
-            count += 1
+    # compute a distance of fingers to the center mass
+    distance_fingers_to_centermass = []
+    
+    for j in range(0, len(fingers_list)):
+        
+        distance_finger_to_centermass = euclidean(fingers_list[j], center_mass)
+        distance_fingers_to_centermass.append(distance_finger_to_centermass)
 
-    return count
+        cv2.line(roi, fingers_list[j], center_mass, [0,0,255], 2)
+        cv2.circle(roi, fingers_list[j], 7, [0,0,255], 1)
+        cv2.putText(roi,'FINGER '+str(j), tuple(finger[j]),cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,0,0),1) 
+        
+    contours_perimeter = cv2.arcLength(segmented, True)
+    signature = [distance, circumference, distance_fingers_to_centermass, contours_perimeter]
+
+
+    return signature

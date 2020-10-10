@@ -12,8 +12,6 @@ from utils.utils import *
 # global variables
 bg = None
 
-
-
 #-----------------
 # MAIN FUNCTION
 #-----------------
@@ -32,6 +30,9 @@ if __name__ == "__main__":
 
     # calibration indicator
     calibrated = False
+    
+    # to containe list of features
+    signature = []
 
     # keep looping, until interrupted
     while(True):
@@ -79,12 +80,13 @@ if __name__ == "__main__":
                 cv2.drawContours(clone, [segmented + (right, top)], -1, (0, 0, 255))
 
                 # count the number of fingers
-                fingers = count(thresholded, segmented)
+                signature = extract_features(roi, thresholded, segmented)
 
-                cv2.putText(clone, str(fingers), (70, 45), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-                
                 # show the thresholded image
                 cv2.imshow("Thesholded", thresholded)
+                cv2.imshow("ROI", roi)
+
+            print("Signature", signature)
 
         # draw the segmented hand
         cv2.rectangle(clone, (left, top), (right, bottom), (0,255,0), 2)

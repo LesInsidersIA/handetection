@@ -21,6 +21,8 @@ def main():
     contours, hull = get_cnts_hull(preprocessed_img)
     defects = get_defects(contours)
 
+    
+
     # get defect points and draw them in the original image
     far_detects = []
     counter = 0
