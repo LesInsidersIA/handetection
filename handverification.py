@@ -44,7 +44,7 @@ def main():
             # with of 400 pixels
 
             frame = vs.read()
-            frame = imutils.resize(frame, width=400)
+            frame = imutils.resize(frame, width=600)
 
             try:
                 # call for inference

@@ -38,6 +38,7 @@ def main():
     Reference objects dimensions.
     Here for reference I have used 2cm*2cm square
     '''
+    
     # TODO : find how to choose the index of contours features of the reference object automatically.
     ref_object = cnts_ref[1]
     box = cv2.minAreaRect(ref_object)

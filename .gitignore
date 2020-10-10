@@ -9,6 +9,8 @@ __pycache__/
 # heavy models
 models/*.weights
 models/*.cfg
+videos/*.mp4
+videos/*.MOV
 
 # images
 images/*.jpg
