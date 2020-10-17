@@ -49,7 +49,7 @@ def main():
     dist_in_pixel = euclidean(tl, tr)
     dist_in_cm = 2
     pixel_per_cm = dist_in_pixel/dist_in_cm
-    print("Pixel per cm = ", pixel_per_cm)
+    print("Pixel per cm =", pixel_per_cm)
 
     # find features of contours of the filtered frame
     contours, hierarchy = cv2.findContours(bin_img2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)   
@@ -65,7 +65,7 @@ def main():
             max_area = area
             ci = i  
             
-	# largest area contour 			  
+    # largest area contour 			  
     cnts = contours[ci]
 
     # find convex hull
@@ -135,19 +135,19 @@ def main():
     cv2.circle(resized_img, fingers_list[2], 7, [0,0,255], 2)
     
     # draw line between corresponding lines
-    cv2.line(resized_img, fingers_list[0], fingers_list[1], [0,0,255], 3)
-    cv2.line(resized_img, fingers_list[0], fingers_list[2], [0,0,255], 3)
-    cv2.line(resized_img, fingers_list[0], center_mass, [0,0,255], 3)
-    cv2.line(resized_img, fingers_list[1], center_mass, [0,0,255], 3)
-    cv2.line(resized_img, fingers_list[2], center_mass, [0,0,255], 3)
+    #cv2.line(resized_img, fingers_list[0], fingers_list[1], [0,0,255], 3)
+    #cv2.line(resized_img, fingers_list[0], fingers_list[2], [0,0,255], 3)
+    #cv2.line(resized_img, fingers_list[0], center_mass, [0,0,255], 3)
+    #cv2.line(resized_img, fingers_list[1], center_mass, [0,0,255], 3)
+    #cv2.line(resized_img, fingers_list[2], center_mass, [0,0,255], 3)
     
     # compute distance between the tring finger and the middle finger
     dc0c1 = euclidean(fingers_list[0], fingers_list[1]) / pixel_per_cm
     dc0c2 = euclidean(fingers_list[0], fingers_list[2]) / pixel_per_cm
     
     # show distance on the midlle of line between fingers
-    cv2.putText(resized_img, "{:.1f}cm".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
-    cv2.putText(resized_img, "{:.1f}cm".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
+    #cv2.putText(resized_img, "{:.1f}cm".format(dc0c1), (int(mc0c1X), int(mc0c1Y - 10)), font, 0.55, [0,0,0], 2)
+    #cv2.putText(resized_img, "{:.1f}cm".format(dc0c2), (int(mc0c2X), int(mc0c2Y - 10)), font, 0.55, [0,0,0], 2)
 
     # show height raised fingers
     for k in range(0, len(fingers)):
@@ -162,7 +162,7 @@ def main():
     cv2.imwrite("images/hsv_img.jpg", bin_img2)
     cv2.imwrite("images/result_img.jpg", resized_img)
 
-    cv2.waitKey(0)
+roi_edged    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 if __name__ == main():

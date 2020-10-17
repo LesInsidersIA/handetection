@@ -29,7 +29,7 @@ if __name__ == "__main__":
         (grabbed, frame) = camera.read()
 
         # resize the frameclonecloneclone
-        frame = imutils.resize(frame, width=800)
+        frame = imutils.resize(frame, width=200)
 
         # flip the frame so that it is not the mirror view
         frame = cv2.flip(frame, 1)

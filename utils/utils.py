@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import euclidean, cosine
 from sklearn.metrics import pairwise
 
 def resizing_img(src_img, scale_percent=50):
@@ -76,8 +76,8 @@ def preprocess_img(src_img):
 
     # create a binary image with where white will be skin colores and rest is black
     # perform basic thresholding operation based on the range of pixel values in the HSV colorspace
-    lower = np.array([2,50,50], dtype="uint8")
-    upper = np.array([15,255,255], dtype="uint8")
+    lower = np.array([2,20,20], dtype="uint8")
+    upper = np.array([255,255,255], dtype="uint8")
     skin_region_hsv = cv2.inRange(hsv_img, lower, upper)
 
     # kernel matrices for morphological transformation
@@ -225,7 +225,7 @@ def extract_features(roi, thresholded, segmented):
     # get defect points and draw them in the original image
     far_detects = []
     counter = 0
-
+                  
     for i in range(defects.shape[0]):
         s,e,f,d = defects[i,0]
         start = tuple(segmented[s][0])
@@ -236,7 +236,7 @@ def extract_features(roi, thresholded, segmented):
         a = np.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
         b = np.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
         c = np.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
-        angle = np.arccos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)) # cosine theorem
+        angle = np.arccos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)) #cosine theorem
         
         four_far_detects = []
         if angle <= np.pi/2:
@@ -293,3 +293,97 @@ def extract_features(roi, thresholded, segmented):
     signature.append(contours_perimeter)
 
     return signature
+
+def compute_signature(roi):
+
+    roi_resized = resizing_img(roi, 100)
+    roi_contour = edge_detection(roi_resized)
+    roi_segmented = preprocess_img(roi_resized)
+
+
+    # find features of contours of the filtered frame
+    contours, hierarchy = cv2.findContours(roi_segmented, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # find max contour area (assume that hand is in the frame)
+    max_area = 100
+    ci = 0	
+    cnt = 0
+    for i in range(len(contours)):
+        cnt = contours[i]
+        area = cv2.contourArea(cnt)
+        if(area > max_area):
+            max_area = area
+            ci = i  
+
+    # largest area contour 			  
+    cnts = contours[ci]
+
+    # find convex hull
+    hull = cv2.convexHull(cnts)
+    
+    # find convex defects
+    hull2 = cv2.convexHull(cnts, returnPoints=False)
+    defects = cv2.convexityDefects(cnts, hull2)
+
+    # get defect points and draw them in the original image
+    far_detect = []
+    for i in range(defects.shape[0]):
+        s,e,f,d = defects[i,0]
+        start = tuple(cnts[s][0])
+        end = tuple(cnts[e][0])
+        far = tuple(cnts[f][0])
+        far_detect.append(far)
+        
+        cv2.line(roi, start, end, [100,0,255], 1)
+
+    moments = cv2.moments(cnts)
+    if moments['m00']!=0:
+        cx = int(moments['m10'] / moments['m00']) 
+        cy = int(moments['m01'] / moments['m00'])
+    center_mass = (cx, cy)
+    
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    # get fingertip points from contour hull if points are proximity of 80 pixels, consider a single point in the group
+    finger = []
+    for i in range(0, len(hull)-1):
+        if (np.absolute(hull[i][0][0] - hull[i+1][0][0]) > 80) or ( np.absolute(hull[i][0][1] - hull[i+1][0][1]) > 80):
+            if hull[i][0][1] < 500 :
+                finger.append(hull[i][0])
+
+    # The fingertip points are 5 hull points with largest y coordinates
+    finger = sorted(finger, key=lambda x: x[1])
+    fingers = finger[0:5]
+    fingers_list = []
+    middle_point = []
+
+    for j in range(0, len(fingers)):
+        fingers_list.append((fingers[j][0], fingers[j][1]))
+    
+    # draw center max
+    cv2.circle(roi, center_mass, 7, [100,0,255], 2)
+    cv2.putText(roi,'Center', tuple(center_mass), font, 0.5, (255,0,0), 1) 
+
+    signature = []
+    for j in range(0, len(fingers_list)):
+        
+        distance_finger_to_centermass = euclidean(fingers_list[j], center_mass)
+        signature.append(distance_finger_to_centermass)
+
+        cv2.line(roi, fingers_list[j], center_mass, [0,255,0], 1)
+        cv2.circle(roi, fingers_list[j], 7, [0,0,255], 1)
+        cv2.putText(roi,'FINGER '+str(j), tuple(finger[j]),cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,0,0),1) 
+
+    contours_perimeter = cv2.arcLength(cnt, True)
+    signature.append(contours_perimeter)
+ 
+    return roi_segmented, roi, signature
+
+
+
+# function to compute distance between two vectores
+
+def compare_signature(src_sample, dst_sample):
+
+    score = cosine(src_sample, dst_sample)
+    return score

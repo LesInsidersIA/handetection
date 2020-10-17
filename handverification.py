@@ -1,7 +1,6 @@
 
 # import the necessary packages
 from utils.utils import *
-from yolo import YOLO
 from imutils.video import FPS
 from imutils.video import WebcamVideoStream
 import numpy as np 
@@ -17,9 +16,6 @@ def main():
         help="# of frames to loop over the video.")
     ap.add_argument("-d", "--display", type=bool, default=True,
         help="whatever or not frames should be displayed")
-    ap.add_argument('-s', '--size', default=416, help='size for yolo')
-    ap.add_argument('-c', '--confidence', default=0.2, 
-        help='confidence for yolo')
 
     args = vars(ap.parse_args())
 
@@ -30,12 +26,6 @@ def main():
     height_img, width_img = (None, None)
     cnt = 1
 
-    # load the yolo models
-    #yolo = YOLO("models/cross-hands-tiny.cfg", "models/cross-hands-tiny.weights", ["hand"])
-    yolo = YOLO("models/cross-hands-tiny-prn.cfg", "models/cross-hands-tiny-prn.weights", ["hand"])
-    yolo.size = int(args["size"])
-    yolo.confidence = float(args["confidence"])
-
     try:
         # loop over somes frames 
         while fps._numFrames < args["num_frames"]:
@@ -44,23 +34,7 @@ def main():
             # with of 400 pixels
 
             frame = vs.read()
-            frame = imutils.resize(frame, width=600)
-
-            try:
-                # call for inference
-                width, height, inference_time, results = yolo.inference(frame)
-            except:
-                print("Error, cannot do the inference")
-            
-            for detection in results:
-                
-                id, name, confidence, x, y, w, h = detection
-                cx = x + (w/2)
-                cy = y + (h/2)
-
-                # draw a bouding box rectangle and label on the image
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 255), 2)
-                #cropped_frame = frame[x:x+h, y:y+w]
+            frame = imutils.resize(frame, width=1200)
 
             cv2.imwrite('images/image'+str(cnt)+'.jpg', frame)
             cnt +=1
@@ -68,7 +42,6 @@ def main():
             # check to see if the frame should be displayed to our screen
             if args["display"] == True:
                 
-                edged_frame = edge_detection(frame)
 
                 cv2.imshow("HAND DETECTION", frame)
 
@@ -76,12 +49,15 @@ def main():
             
             # update the fps counter
             fps.update()
-
+        
         # stop the timer and display FPS information
         fps.stop()
+        
         print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
         print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
         
+        
+
         # do a bit of cleanup
         cv2.destroyAllWindows()
         vs.stop()
@@ -89,6 +65,26 @@ def main():
     except KeyboardInterrupt:
         print("Average FPS: ", str("{0:.2f}".format(fps)))
 
+    img = cv2.imread("images/05.jpg")
+    roi_segmented, roi, computed_signature = compute_signature(img)
+    
+    print("[INFO] signature : ", computed_signature)
 
+    true_signature = [420.48751503547584, 396.528832913388, 397.1073086929854, 364.9448993993441, 24.97056245803833]
+    score = compare_signature(true_signature, computed_signature)
+    
+    print("[INFO] score = ", score)
+
+    if score <= 0.33:
+        print("[INFO] AUTHORISED ACCESS")
+    else :
+        
+        print("[INFO] ACCESS DENIED")
+    
+    cv2.imshow("Result", img) 
+    cv2.imshow("Segmented", roi_segmented)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
 if __name__ == main():
     main()
