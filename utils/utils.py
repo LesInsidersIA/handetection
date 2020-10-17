@@ -98,7 +98,9 @@ def preprocess_img(src_img):
 
     return thresh_img
 
-
+#---------------------------------------------
+# Compute the midpoint between two points
+#---------------------------------------------
 def midpoint(ptA, ptB):
     
     """
@@ -119,7 +121,6 @@ def midpoint(ptA, ptB):
 #---------------------------------------------
 # Function to show array of images (intermediate results)
 #---------------------------------------------
-
 def show_images(images):
     
     """
@@ -135,16 +136,13 @@ def show_images(images):
 #---------------------------------------------
 # Computes the Euclidean distance between two list
 #---------------------------------------------
-
 def group_distance(vector_list1, vector_list2):      
     return [[euclidean(v1, v2) for v2 in vector_list2] for v1 in vector_list1]
-
 
 
 #---------------------------------------------
 # Calculate distance of each finger tip to the center mass
 #---------------------------------------------
-
 def distance_fingers_to_centermass(fingers, center_mass):
     fingers_distance = []
     for i in range(0, len(fingers)):
@@ -163,13 +161,13 @@ def get_cnts_hull(mask_img):
     return contours, hull
 
 #---------------------------------------------
-# Compute defects contours
+# To get hull and defects contours
 #---------------------------------------------
-
 def get_defects(contours):
-    hull = cv2.convexHull(contours, returnPoints=False)
-    defects = cv2.convexityDefects(contours, hull)
-    return defects
+    hull1 = cv2.convexHull(contours)
+    hull2 = cv2.convexHull(contours, returnPoints=False)
+    defects = cv2.convexityDefects(contours, hull2)
+    return hull1, hull2, defects
 
 
 #---------------------------------------------
@@ -213,43 +211,21 @@ def segment(image, threshold=25):
         return (thresholded, segmented)
 
 #--------------------------------------------------------------
-# To count the number of fingers in the segmented hand region
+# To extract the hand signature of the hand in real time
 #--------------------------------------------------------------
 def extract_features(roi, thresholded, segmented):
     # find the convex hull of the segmented hand region
-    chull = cv2.convexHull(segmented)
     defects = []
-    # find the most extreme points in the convex hull
-    extreme_top    = tuple(chull[chull[:, :, 1].argmin()][0])
-    extreme_bottom = tuple(chull[chull[:, :, 1].argmax()][0])
-    extreme_left   = tuple(chull[chull[:, :, 0].argmin()][0])
-    extreme_right  = tuple(chull[chull[:, :, 0].argmax()][0])
+    chull1, chull2, defects = get_defects(segmented)
+    pre_process_roi = preprocess_img(roi)
 
-    # find the center of the palm
-    cX = int((extreme_left[0] + extreme_right[0]) / 2)
-    cY = int((extreme_top[1] + extreme_bottom[1]) / 2)
-
-    # find the maximum euclidean distance between the center of the palm
-    # and the most extreme points of the convex hull
-    distance = pairwise.euclidean_distances([(cX, cY)], Y=[extreme_left, extreme_right, extreme_top, extreme_bottom])[0]
-    maximum_distance = distance[distance.argmax()]
-
-    # calculate the radius of the circle with 80% of the max euclidean distance obtained
-    radius = int(0.8 * maximum_distance)
-
-    # find the circumference of the circle
-    circumference = (2 * np.pi * radius)
-    cv2.circle(roi, (cX, cY), 4, [100,0,255], -1)
-
-    
-    
-
-    defects = get_defects(segmented)
+    #print("Shape of segmented :", np.shape(segmented))
+    #print("Shape of pre_process_roi :", np.shape(pre_process_roi))
     
     # get defect points and draw them in the original image
     far_detects = []
     counter = 0
-    
+
     for i in range(defects.shape[0]):
         s,e,f,d = defects[i,0]
         start = tuple(segmented[s][0])
@@ -268,7 +244,7 @@ def extract_features(roi, thresholded, segmented):
             cv2.circle(roi, far, 4, [0,255,255], -1)
             four_far_detects.append(far)
             cv2.line(roi, far, far, [255,255,0], 1)
-        #cv2.circle(roi, far, 10, [0,0,255], 2)
+        
         if counter > 0:
             counter = counter + 1
     
@@ -280,12 +256,12 @@ def extract_features(roi, thresholded, segmented):
     
     # get fingertip points from contour hull if points are proximity of 80 pixels, consider a single point in the group
     finger = []
-    for i in range(0, len(chull)-1):
-        if (np.absolute(chull[i][0][0] - chull[i+1][0][0]) > 80) or ( np.absolute(chull[i][0][1] - chull[i+1][0][1]) > 80):
-            if chull[i][0][1] < 500 :
-                finger.append(chull[i][0])
+    for i in range(0, len(chull1)-1):
+        if (np.absolute(chull1[i][0][0] - chull1[i+1][0][0]) > 80) or ( np.absolute(chull1[i][0][1] - chull1[i+1][0][1]) > 80):
+            if chull1[i][0][1] < 500 :
+                finger.append(chull1[i][0])
 
-    # the fingertip points are 5 hull points with largest y coordinates
+    # The fingertip points are 5 hull points with largest y coordinates
     finger = sorted(finger, key=lambda x: x[1])
 
     fingers = finger[0:5]
@@ -295,25 +271,25 @@ def extract_features(roi, thresholded, segmented):
     for j in range(0, len(fingers)):
         fingers_list.append((fingers[j][0], fingers[j][1]))
     
-    print("fingers = ", fingers)
-    print("finger list", fingers_list)
+    #print("fingers = ", fingers)
+    #print("finger list", fingers_list)
     
     cv2.circle(roi, center_mass, 7, [100,0,255], 2)
 
-    # compute a distance of fingers to the center mass
-    distance_fingers_to_centermass = []
+    # To compute distance of fingers to the center mass
+    signature = []
     
     for j in range(0, len(fingers_list)):
         
         distance_finger_to_centermass = euclidean(fingers_list[j], center_mass)
-        distance_fingers_to_centermass.append(distance_finger_to_centermass)
+        signature.append(distance_finger_to_centermass)
 
         cv2.line(roi, fingers_list[j], center_mass, [0,0,255], 2)
         cv2.circle(roi, fingers_list[j], 7, [0,0,255], 1)
         cv2.putText(roi,'FINGER '+str(j), tuple(finger[j]),cv2.FONT_HERSHEY_SIMPLEX,0.4,(255,0,0),1) 
-        
-    contours_perimeter = cv2.arcLength(segmented, True)
-    signature = [distance, circumference, distance_fingers_to_centermass, contours_perimeter]
 
+    
+    contours_perimeter = cv2.arcLength(segmented, True)
+    signature.append(contours_perimeter)
 
     return signature

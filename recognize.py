@@ -86,7 +86,7 @@ if __name__ == "__main__":
                 cv2.imshow("Thesholded", thresholded)
                 cv2.imshow("ROI", roi)
 
-            print("Signature", signature)
+            print("Signature : ", signature)
 
         # draw the segmented hand
         cv2.rectangle(clone, (left, top), (right, bottom), (0,255,0), 2)
