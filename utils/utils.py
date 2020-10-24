@@ -297,6 +297,7 @@ def extract_features(roi, thresholded, segmented):
 def compute_signature(roi):
 
     roi_resized = resizing_img(roi, 100)
+    print("roi shape",roi_resized.shape)
     roi_contour = edge_detection(roi_resized)
     roi_segmented = preprocess_img(roi_resized)
 
@@ -353,6 +354,7 @@ def compute_signature(roi):
 
     # The fingertip points are 5 hull points with largest y coordinates
     finger = sorted(finger, key=lambda x: x[1])
+    print("finger ", len(finger))
     fingers = finger[0:5]
     fingers_list = []
     middle_point = []
@@ -363,7 +365,7 @@ def compute_signature(roi):
     # draw center max
     cv2.circle(roi, center_mass, 7, [100,0,255], 2)
     cv2.putText(roi,'Center', tuple(center_mass), font, 0.5, (255,0,0), 1) 
-
+    #cv2.drawContours(roi, [contours], -1, (0,255,0), 1)
     signature = []
     for j in range(0, len(fingers_list)):
         
@@ -387,3 +389,47 @@ def compare_signature(src_sample, dst_sample):
 
     score = cosine(src_sample, dst_sample)
     return score
+
+
+def create_signature(roi):
+    
+    hsvim = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    lower = np.array([0, 20, 20], dtype = "uint8")
+    upper = np.array([255, 255, 255], dtype = "uint8")
+    skinRegionHSV = cv2.inRange(hsvim, lower, upper)
+    blurred = cv2.blur(skinRegionHSV, (2,2))
+    ret, roi_thresholded = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY)
+
+    contours, hierarchy = cv2.findContours(roi_thresholded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = max(contours, key=lambda x: cv2.contourArea(x))
+    cv2.drawContours(roi, [contours], -1, (0,255,0), 1)
+
+    hull = cv2.convexHull(contours)
+    cv2.drawContours(roi, [hull],-1,(0,255,255), 1)
+
+    hull = cv2.convexHull(contours, returnPoints=False)
+    defects = cv2.convexityDefects(contours, hull)
+
+    if defects is not None:
+        for i in range(defects.shape[0]):  # calculate the angle
+            s, e, f, d = defects[i][0]
+            start = tuple(contours[s][0])
+            end = tuple(contours[e][0])
+            far = tuple(contours[f][0])
+            
+            a = np.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+            b = np.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+            c = np.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
+    
+    moments = cv2.moments(contours)
+    if moments['m00']!=0:
+        cx = int(moments['m10'] / moments['m00']) 
+        cy = int(moments['m01'] / moments['m00'])
+    center_mass = (cx, cy)
+            
+    #print("len contours", len(cnts))
+    computed_signature = 0
+    roi_segmented = 0
+
+
+    return roi_thresholded, roi_segmented, roi, computed_signature
